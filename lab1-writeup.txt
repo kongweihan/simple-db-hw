@@ -1,0 +1,51 @@
+Classes:
+
+Tuple
+- Represents one row of data, with a specified TupleDesc
+- Has a RecordId
+- Contains the actual data
+- Fixed length
+
+TupleDesc
+- A schema, a list of (fieldType, optional fieldname)
+
+fieldType
+- Predefined, int and string, fixed length
+
+RecordId
+- PageId and tupleNo within the page
+
+PageId
+- TableId and PageNum within the table
+
+DbFile
+- Represents a table
+- Can have different implementation to support different access method
+- Usually put the page loading logic here, since the implementation varies for different access methods
+- But when Operators use the DbFile, the pages needs to be managed by BufferPool
+
+Page
+- Regardless of the implementation of DbFile, each file must be physically divided into Pages
+- Pages are cached and flushed by singleton BufferPool
+- Different DbFile implementation has different Page implementation
+
+HeapFile
+- A kind of DbFile
+- logically, just a list of unordered Tuples
+- physically represented by a file on disk
+- at loading time, specify TupleDesc for schema (but schema is not stored in the file)
+
+HeapPage
+- An array of slots, with a header
+- Header is a bitmap of whether a slot stores a Tuple or empty
+- Fixed size
+
+Operator
+- A step in the query plan
+- Chained to perform the query operations
+- Represents a type of relation algebra
+
+SeqScan
+- An operator that scans a table(DbFile)
+- It calls DbFile's iterator, which iterate through HeapPages in the HeapFile, with help from HeapPage's iterator
+- Pages are loaded one by one via BufferPool as the scan progresses
