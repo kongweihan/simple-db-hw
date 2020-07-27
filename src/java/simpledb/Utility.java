@@ -153,5 +153,18 @@ public class Utility {
         }
         return out;
     }
+
+    public static void printOperator(OpIterator operator) {
+        try {
+            operator.open();
+            System.out.println("kkk operator:" + operator);
+            while (operator.hasNext()) {
+                System.out.println("kkk " + operator.next());
+            }
+            operator.rewind();
+        } catch (Exception e) {
+            new RuntimeException(e);
+        }
+    }
 }
 

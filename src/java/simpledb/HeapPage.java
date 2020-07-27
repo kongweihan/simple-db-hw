@@ -21,6 +21,9 @@ public class HeapPage implements Page {
     final Tuple tuples[];
     final int numSlots;
 
+    boolean dirty;
+    TransactionId tid;
+
     byte[] oldData;
     private final Byte oldDataLock=new Byte((byte)0);
 
@@ -258,6 +261,13 @@ public class HeapPage implements Page {
     public void deleteTuple(Tuple t) throws DbException {
         // some code goes here
         // not necessary for lab1
+        if (!t.getRecordId().getPageId().equals(this.pid)) {
+            throw new DbException(String.format("Tuple %s is not on page %s", t, pid));
+        }
+        if (!isSlotUsed(t.getRecordId().getTupleNumber())) {
+            throw new DbException(String.format("Tuple %s slot %d is already empty", t, t.getRecordId().getTupleNumber()));
+        }
+        markSlotUsed(t.getRecordId().getTupleNumber(), false);
     }
 
     /**
@@ -270,6 +280,21 @@ public class HeapPage implements Page {
     public void insertTuple(Tuple t) throws DbException {
         // some code goes here
         // not necessary for lab1
+        if (!t.getTupleDesc().equals(td)) {
+            throw new DbException(String.format("Tuple desc %s mismatch page desc %d", t.getTupleDesc(), td));
+        }
+        if (getNumEmptySlots() == 0) {
+            throw new DbException(String.format("Page %s is full.", pid));
+        }
+        for (int i = 0; i < tuples.length; i++) {
+            if (!isSlotUsed(i)) {
+                tuples[i] = t;
+                tuples[i].setRecordId(new RecordId(pid, i));
+                markSlotUsed(i, true);
+                return;
+            }
+        }
+        throw new DbException(String.format("Page %d claims to have empty slot but non is found.", pid));
     }
 
     /**
@@ -293,7 +318,9 @@ public class HeapPage implements Page {
      */
     public void markDirty(boolean dirty, TransactionId tid) {
         // some code goes here
-	// not necessary for lab1
+	    // not necessary for lab1
+        this.dirty = dirty;
+        this.tid = tid;
     }
 
     /**
@@ -301,8 +328,8 @@ public class HeapPage implements Page {
      */
     public TransactionId isDirty() {
         // some code goes here
-	// Not necessary for lab1
-        return null;      
+	    // Not necessary for lab1
+        return dirty ? tid : null;
     }
 
     /**
@@ -347,7 +374,6 @@ public class HeapPage implements Page {
     public static class HeapPageIterator implements Iterator<Tuple> {
 
         private HeapPage page;
-        private int itTuple = 0;
         private int itSlot = 0;
 
         public HeapPageIterator(HeapPage page) {
@@ -356,7 +382,13 @@ public class HeapPage implements Page {
 
         @Override
         public boolean hasNext() {
-            return itTuple < page.getNumUsedSlots();
+            while (itSlot < page.numSlots) {
+                if (page.isSlotUsed(itSlot)) {
+                    return true;
+                }
+                itSlot++;
+            }
+            return false;
         }
 
         @Override
@@ -364,11 +396,10 @@ public class HeapPage implements Page {
 //            System.out.printf("kkk Page itTuple: %d itSlot: %d numUsedSlots: %d\n", itTuple, itSlot, page.getNumUsedSlots());
             while (itSlot < page.numSlots) {
                 if (page.isSlotUsed(itSlot)) {
-                    itTuple++;
-                    return page.getTuple(itSlot++);
-                } else {
                     itSlot++;
+                    return page.getTuple(itSlot - 1);
                 }
+                itSlot++;
             }
             throw new NoSuchElementException("No more tuples on this page.");
         }

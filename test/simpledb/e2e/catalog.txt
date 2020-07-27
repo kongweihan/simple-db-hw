@@ -1,0 +1,2 @@
+student (id int, name string, age int, dep int)
+department (id int, name string)

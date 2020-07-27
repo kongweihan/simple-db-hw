@@ -1,54 +1,47 @@
 package simpledb;
 
+import java.util.*;
+
 /**
  * Knows how to compute some aggregate over a set of IntFields.
  */
-public class IntegerAggregator implements Aggregator {
+public class IntegerAggregator extends AggregatorImpl {
 
-    private static final long serialVersionUID = 1L;
-
-    /**
-     * Aggregate constructor
-     * 
-     * @param gbfield
-     *            the 0-based index of the group-by field in the tuple, or
-     *            NO_GROUPING if there is no grouping
-     * @param gbfieldtype
-     *            the type of the group by field (e.g., Type.INT_TYPE), or null
-     *            if there is no grouping
-     * @param afield
-     *            the 0-based index of the aggregate field in the tuple
-     * @param what
-     *            the aggregation operator
-     */
-
-    public IntegerAggregator(int gbfield, Type gbfieldtype, int afield, Op what) {
-        // some code goes here
+    public IntegerAggregator(int gfield, Type gfieldtype, int afield, Op what) {
+        super(gfield, gfieldtype, afield, what);
     }
 
-    /**
-     * Merge a new tuple into the aggregate, grouping as indicated in the
-     * constructor
-     * 
-     * @param tup
-     *            the Tuple containing an aggregate field and a group-by field
-     */
-    public void mergeTupleIntoGroup(Tuple tup) {
-        // some code goes here
+    @Override
+    protected IntField aggregate(List<Field> group, Op op) {
+        switch (op) {
+            case COUNT:
+                return new IntField(group.size());
+            case SUM:
+                int sum = 0;
+                for (Field field : group) {
+                    sum += ((IntField) field).getValue();
+                }
+                return new IntField(sum);
+            case AVG:
+                sum = 0;
+                for (Field field : group) {
+                    sum += ((IntField) field).getValue();
+                }
+                return new IntField(sum / group.size());
+            case MIN:
+                int min = Integer.MAX_VALUE;
+                for (Field field : group) {
+                    min = Math.min(min, ((IntField) field).getValue());
+                }
+                return new IntField(min);
+            case MAX:
+                int max = Integer.MIN_VALUE;
+                for (Field field : group) {
+                    max = Math.max(max, ((IntField) field).getValue());
+                }
+                return new IntField(max);
+            default:
+                throw new RuntimeException("Op not supported: " + op.name());
+        }
     }
-
-    /**
-     * Create a OpIterator over group aggregate results.
-     * 
-     * @return a OpIterator whose tuples are the pair (groupVal, aggregateVal)
-     *         if using group, or a single (aggregateVal) if no grouping. The
-     *         aggregateVal is determined by the type of aggregate specified in
-     *         the constructor.
-     */
-    public OpIterator iterator() {
-        // some code goes here
-        throw new
-        UnsupportedOperationException("please implement me for lab2");
-    }
-
 }

@@ -91,6 +91,12 @@ public class JoinTest extends SimpleDbTestBase {
     Join op = new Join(pred, scan1, scan2);
     op.open();
     gtJoin.open();
+//    while (gtJoin.hasNext()) {
+//      System.out.println("expected: " + gtJoin.next());
+//    }
+//    while (op.hasNext()) {
+//      System.out.println(op.next());
+//    }
     TestUtil.matchAllTuples(gtJoin, op);
   }
 

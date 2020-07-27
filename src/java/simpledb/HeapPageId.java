@@ -78,4 +78,9 @@ public class HeapPageId implements PageId {
         return data;
     }
 
+    @Override
+    public String toString() {
+        return String.format("table(%d)page(%d)", tableId, pageNo);
+    }
+
 }

@@ -69,4 +69,8 @@ public class RecordId implements Serializable {
         return pageId.hashCode() * tupleNo;
     }
 
+    @Override
+    public String toString() {
+        return String.format("page(%s)tuple(%d)", pageId, tupleNo);
+    }
 }
