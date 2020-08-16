@@ -93,6 +93,7 @@ public class HeapFile implements DbFile {
     /**
      * Returns the number of pages in this HeapFile.
      */
+    @Override
     public int numPages() {
         // some code goes here
         int numPage = (int) file.length() / BufferPool.getPageSize();
@@ -171,14 +172,15 @@ public class HeapFile implements DbFile {
 
         @Override
         public void open() throws DbException, TransactionAbortedException {
+            super.open();
             nextPageNum = 0;
         }
 
         @Override
         public void close() {
-            super.close();
             curPageIt = null;
             nextPageNum = heapFile.numPages();
+            super.close();
         }
 
         @Override

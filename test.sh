@@ -24,3 +24,8 @@ ant runtest -Dtest=InsertTest
 ant runsystest -Dtest=InsertTest
 ant runsystest -Dtest=DeleteTest
 ant runsystest -Dtest=EvictionTest
+
+ant runtest -Dtest=IntHistogramTest
+ant runtest -Dtest=TableStatsTest
+ant runtest -Dtest=JoinOptimizerTest
+ant runsystest -Dtest=QueryTest

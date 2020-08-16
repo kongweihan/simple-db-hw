@@ -5,13 +5,21 @@ import java.util.NoSuchElementException;
 /** Helper for implementing DbFileIterators. Handles hasNext()/next() logic. */
 public abstract class AbstractDbFileIterator implements DbFileIterator {
 
+    @Override
 	public boolean hasNext() throws DbException, TransactionAbortedException {
+	    if (!open) {
+            System.out.println("AbstractDbFileIterator not open.");
+        }
         if (next == null) next = readNext();
         return next != null;
     }
 
+    @Override
     public Tuple next() throws DbException, TransactionAbortedException,
             NoSuchElementException {
+        if (!open) {
+            System.out.println("AbstractDbFileIterator not open.");
+        }
         if (next == null) {
             next = readNext();
             if (next == null) throw new NoSuchElementException();
@@ -22,8 +30,15 @@ public abstract class AbstractDbFileIterator implements DbFileIterator {
         return result;
     }
 
+    @Override
+    public void open() throws DbException, TransactionAbortedException {
+        open = true;
+    }
+
     /** If subclasses override this, they should call super.close(). */
+    @Override
     public void close() {
+        open = false;
         // Ensures that a future call to next() will fail
         next = null;
     }
@@ -33,4 +48,6 @@ public abstract class AbstractDbFileIterator implements DbFileIterator {
     protected abstract Tuple readNext() throws DbException, TransactionAbortedException;
 
     private Tuple next = null;
+
+    private boolean open = false;
 }

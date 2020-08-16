@@ -111,7 +111,9 @@ public class JoinOptimizer {
             // HINT: You may need to use the variable "j" if you implemented
             // a join algorithm that's more complicated than a basic
             // nested-loops join.
-            return -1.0;
+//            System.out.println(String.format("\t\t\t\tkkk joinCost: card1:%d " +
+//                    "card2:%d cost1:%f cost2:%f", card1, card2, cost1, cost2));
+            return cost1 + card1 * cost2 + card1 * card2;
         }
     }
 
@@ -155,9 +157,30 @@ public class JoinOptimizer {
             String field2PureName, int card1, int card2, boolean t1pkey,
             boolean t2pkey, Map<String, TableStats> stats,
             Map<String, Integer> tableAliasToId) {
-        int card = 1;
+//        int card = 1;
+//        return card <= 0 ? 1 : card;
+
         // some code goes here
-        return card <= 0 ? 1 : card;
+        if (joinOp == Predicate.Op.EQUALS) {
+            if (t1pkey || t2pkey) {
+                // When one of the attributes is a primary key, the number of tuples
+                // produced by the join cannot be larger than the cardinality of the
+                // non-primary key attribute.
+                int min1 = t1pkey ? card2 : Integer.MAX_VALUE;
+                int min2 = t2pkey ? card1 : Integer.MAX_VALUE;
+                return Math.min(min1, min2);
+            } else {
+                // When there is no primary key in the join, it's hard to say what's the
+                // cardinality of the join. Could be 0 or the size of the cross-product of
+                // the tables. Use simple heuristics: the larger size of the two tables.
+                return Math.max(card1, card2);
+            }
+        } else {
+            // For range joins, it's hard to say what's the cardinality of the join.
+            // But in generally it should be larger than the no-primary key equality join.
+            // Use simple heuristics: 30% of size of the cross-product.
+            return (int) (card1 * card2 * 0.3);
+        }
     }
 
     /**
@@ -217,11 +240,46 @@ public class JoinOptimizer {
             HashMap<String, TableStats> stats,
             HashMap<String, Double> filterSelectivities, boolean explain)
             throws ParsingException {
-        //Not necessary for labs 1--3
-
+        // Not necessary for labs 1--2
         // some code goes here
-        //Replace the following
-        return joins;
+        PlanCache pc = new PlanCache();
+        for (int setSize = 1; setSize <= joins.size(); setSize++) {
+//            System.out.println("kkk setSize: " + setSize);
+            for (Set<LogicalJoinNode> subset : enumerateSubsets(joins, setSize)) {
+                double bestCostSoFar = Double.MAX_VALUE;
+                for (LogicalJoinNode node : subset) {
+                    CostCard bestPlan = computeCostAndCardOfSubplan(stats, filterSelectivities,
+                            node, subset, bestCostSoFar, pc);
+                    if (bestPlan != null) {
+//                        System.out.println("\t\tkkk bestPlan found for: " + subset);
+                        bestCostSoFar = bestPlan.cost;
+                        pc.addPlan(subset, bestCostSoFar, bestPlan.card, bestPlan.plan);
+                    }
+                }
+                // For the last iteration, there's only 1 subset, i.e. the whole set
+                if (setSize == joins.size()) {
+                    if (pc.getOrder(subset) != null) {
+                        if (explain) {
+                            printJoins(pc.getOrder(subset), pc, stats, filterSelectivities);
+                        }
+                        return pc.getOrder(subset);
+                    } else {
+                        return joins;
+                    }
+                }
+            }
+        }
+        throw new RuntimeException("orderJoins(): should be impossible to happen.");
+    }
+
+    // For debugging
+    private LogicalJoinNode getNode(String t1, String t2) {
+        for (LogicalJoinNode node : joins) {
+            if (node.t1Alias.equals(t1) && node.t2Alias.equals(t2)) {
+                return node;
+            }
+        }
+        throw new RuntimeException(String.format("node %s:%s not found", t1, t2));
     }
 
     // ===================== Private Methods =================================
@@ -250,7 +308,7 @@ public class JoinOptimizer {
      * @param pc
      *            the PlanCache for this join; should have subplans for all
      *            plans of size joinSet.size()-1
-     * @return A {@link CostCard} objects desribing the cost, cardinality,
+     * @return A {@link CostCard} objects describing the cost, cardinality,
      *         optimal subplan
      * @throws ParsingException
      *             when stats, filterSelectivities, or pc object is missing
@@ -426,12 +484,12 @@ public class JoinOptimizer {
      * @param js
      *            the join plan to visualize
      * @param pc
-     *            the PlanCache accumulated whild building the optimal plan
+     *            the PlanCache accumulated while building the optimal plan
      * @param stats
      *            table statistics for base tables
      * @param selectivities
      *            the selectivities of the filters over each of the tables
-     *            (where tables are indentified by their alias or name if no
+     *            (where tables are identified by their alias or name if no
      *            alias is given)
      */
     private void printJoins(Vector<LogicalJoinNode> js, PlanCache pc,
